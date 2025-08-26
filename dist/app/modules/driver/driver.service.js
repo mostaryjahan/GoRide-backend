@@ -59,7 +59,6 @@ const acceptRide = (rideId, driverUserId) => __awaiter(void 0, void 0, void 0, f
     ride.status = ride_interface_1.RideStatus.ACCEPTED;
     ride.timestamps.acceptedAt = new Date();
     yield ride.save();
-    console.log('Ride accepted - stored driver ID:', driver._id.toString());
     driver.availabilityStatus = driver_interface_1.IsAvailable.OFFLINE;
     yield driver.save();
     return ride;
@@ -81,7 +80,6 @@ const rejectRide = (rideId, driverUserId) => __awaiter(void 0, void 0, void 0, f
     ride.driver = driver._id;
     ride.status = ride_interface_1.RideStatus.REJECTED;
     yield ride.save();
-    console.log('Ride rejected - stored driver ID:', driver._id.toString());
     driver.availabilityStatus = driver_interface_1.IsAvailable.ONLINE;
     yield driver.save();
     return ride;
@@ -197,8 +195,8 @@ const getDriverStats = (userId) => __awaiter(void 0, void 0, void 0, function* (
 });
 const getDriverEarnings = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const driver = yield driver_model_1.Driver.findOne({ user: userId });
-    if (!driver || !driver.isVerified) {
-        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver is not Verified");
+    if (!driver) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver is not found");
     }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -241,12 +239,10 @@ const getDriverEarnings = (userId) => __awaiter(void 0, void 0, void 0, function
     };
 });
 const getActiveRides = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('getActiveRides called with userId:', userId);
     const driver = yield driver_model_1.Driver.findOne({ user: userId });
     if (!driver) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
     }
-    console.log('Driver found - ID:', driver._id, 'User:', driver.user);
     const activeRides = yield ride_model_1.Ride.find({
         $or: [
             { driver: driver._id },
@@ -254,8 +250,6 @@ const getActiveRides = (userId) => __awaiter(void 0, void 0, void 0, function* (
         ],
         status: { $in: ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'] }
     }).populate('rider', 'name email phone').sort({ createdAt: -1 });
-    console.log('Active rides found:', activeRides.length);
-    console.log('Query: driver =', driver._id.toString(), 'status in', ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT']);
     return activeRides;
 });
 exports.DriverService = {
