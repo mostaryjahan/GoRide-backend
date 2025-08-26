@@ -5,43 +5,48 @@ import { IsBlock, Role } from "../user/user.interface";
 import { Ride } from "../ride/ride.model";
 import { IAdminReport } from "./admin.interface";
 import { Driver } from "../driver/driver.model";
-import { IsApprove } from "../driver/driver.interface";
 import { RideStatus } from "../ride/ride.interface";
 
-const approveDriver = async (driverId: string) => {
-  const existingDriver = await Driver.findById(driverId);
+const approveDriver = async (userId: string) => {
+  const existingUser = await User.findById(userId);
 
-  if (!existingDriver) {
-    throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
+  if (!existingUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
-  if (existingDriver.approvalStatus === IsApprove.APPROVED) {
+  if (existingUser.role !== Role.DRIVER) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User is not a driver");
+  }
+
+  if (existingUser.isApproved) {
     throw new AppError(httpStatus.BAD_REQUEST, "Driver is already approved");
   }
 
-  existingDriver.approvalStatus = IsApprove.APPROVED;
-  await existingDriver.save();
+  existingUser.isApproved = true;
+  await existingUser.save();
 
-  await User.findByIdAndUpdate(existingDriver.user, { role: Role.DRIVER });
-
-  return existingDriver;
+  return existingUser;
 };
 
-const suspendDriver = async (driverId: string) => {
-  const existingDriver = await Driver.findById(driverId);
+const suspendDriver = async (userId: string) => {
+  const existingUser = await User.findById(userId);
 
-  if (!existingDriver) {
-    throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
+  if (!existingUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
-  if (existingDriver.approvalStatus === IsApprove.SUSPENDED) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Driver is already suspended");
+  if (existingUser.role !== Role.DRIVER) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User is not a driver");
   }
 
-  existingDriver.approvalStatus = IsApprove.SUSPENDED;
-  await existingDriver.save();
+  if (!existingUser.isApproved) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Driver is not approved yet");
+  }
 
-  return existingDriver;
+  existingUser.isApproved = false;
+  await existingUser.save();
+
+  return existingUser;
 };
 
 const blockUser = async (userId: string) => {
@@ -87,7 +92,15 @@ const getAllDrivers = async () => {
 };
 
 const getAllRides = async () => {
-  return await Ride.find().populate("rider", "-password").populate("driver");
+  return await Ride.find()
+    .populate("rider", "-password")
+    .populate({
+      path: "driver",
+      populate: {
+        path: "user",
+        select: "-password",
+      },
+    });
 };
 
 export const generateAdminReport = async (): Promise<IAdminReport> => {

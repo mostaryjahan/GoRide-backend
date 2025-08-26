@@ -9,6 +9,8 @@ const createRide = async (riderId: string, payload: Partial<IRide>) => {
     throw new AppError(httpStatus.UNAUTHORIZED, "Unauthorized access");
   }
 
+  // console.log('Creating ride with payload:', payload);
+
   const existingRide = await Ride.findOne({
     rider: riderId,
     status: {
@@ -28,19 +30,27 @@ const createRide = async (riderId: string, payload: Partial<IRide>) => {
     );
   }
 
-  const ride = await Ride.create({
-    rider: riderId,
-    pickupLocation: payload.pickupLocation,
-    destinationLocation: payload.destinationLocation,
-    status: RideStatus.REQUESTED,
-    fare: payload.fare,
-    isPaid: false,
-    timestamps: {
-      requestedAt: new Date(),
-    },
-  });
+  try {
+    const ride = await Ride.create({
+      rider: riderId,
+      pickupLocation: payload.pickupLocation,
+      destinationLocation: payload.destinationLocation,
+      status: RideStatus.REQUESTED,
+      fare: payload.fare,
+      isPaid: payload.paymentMethod === 'cash' ? true : false,
+      paymentMethod: payload.paymentMethod || 'cash',
+      timestamps: {
+        requestedAt: new Date(),
+      },
+    });
+    
+    // console.log('Ride created successfully:', ride._id);
+    return ride;
+  } catch (error) {
+    // console.error('Error creating ride:', error);
+    throw error;
+  }
 
-  return ride;
 };
 
 const cancelRide = async (rideId: string, riderId: string) => {
@@ -71,6 +81,18 @@ const cancelRide = async (rideId: string, riderId: string) => {
     );
   }
 
+  // Check if within 5-minute cancel window
+  const requestTime = ride.timestamps.requestedAt || ride.createdAt;
+  const now = new Date();
+  const timeDiff = (now.getTime() - requestTime.getTime()) / (1000 * 60); // minutes
+  
+  if (timeDiff > 5) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cancel window expired. You can only cancel within 5 minutes of requesting"
+    );
+  }
+
   ride.status = RideStatus.CANCELLED;
   ride.timestamps.cancelledAt = new Date();
 
@@ -90,13 +112,22 @@ const getSingleRide = async (rideId: string, riderId: string) => {
     throw new AppError(httpStatus.BAD_REQUEST, "Invalid ride ID");
   }
 
-  const ride = await Ride.findById(rideId);
+  const ride = await Ride.findById(rideId)
+    .populate({
+      path: 'driver',
+      select: 'vehicleType vehicleNumber',
+      populate: {
+        path: 'user',
+        select: 'name phone'
+      }
+    })
+    .populate('rider', 'name phone');
 
   if (!ride) {
     throw new AppError(httpStatus.NOT_FOUND, "Ride not found");
   }
 
-  if (ride.rider.toString() !== riderId) {
+  if (ride.rider._id.toString() !== riderId) {
     throw new AppError(
       httpStatus.FORBIDDEN,
       "You are not authorized to view this ride"

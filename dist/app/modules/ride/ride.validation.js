@@ -21,5 +21,6 @@ exports.createRideZodSchema = zod_1.z.object({
         message: "Fare is Required"
     })
         .positive("Fare must be a positive number")
-        .min(10, "Fare must be at least 10 taka")
+        .min(10, "Fare must be at least 10 taka"),
+    paymentMethod: zod_1.z.enum(["cash", "card"]).optional().default("cash")
 });

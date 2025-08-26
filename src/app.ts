@@ -4,7 +4,7 @@ import { router } from "./app/routes";
 import cookieParser from "cookie-parser";
 import { envVars } from "./app/config/env";
 
-import expressSession from "express-session"
+import expressSession from "express-session";
 import "./app/config/passport";
 import { notFound } from "./app/middlewares/notFound";
 import { globalErrorHandler } from "./app/middlewares/globalErrorHandler";
@@ -12,7 +12,7 @@ import passport from "passport";
 
 const app = express();
 
-app.use(cookieParser())
+app.use(cookieParser());
 app.use(express.json());
 
 app.use(
@@ -22,19 +22,17 @@ app.use(
   })
 );
 
-
-app.use(expressSession({
-  secret: envVars.EXPRESS_SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false
-}))
-app.use(passport.initialize())
-app.use(passport.session())
-
-
+app.use(
+  expressSession({
+    secret: envVars.EXPRESS_SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use("/api", router);
-
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
@@ -44,6 +42,5 @@ app.get("/", (req: Request, res: Response) => {
 
 app.use(globalErrorHandler);
 
-
-app.use(notFound)
+app.use(notFound);
 export default app;

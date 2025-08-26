@@ -85,6 +85,47 @@ const getRideHistory = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void
         data: result,
     });
 }));
+const updateDriverStatus = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.user;
+    const { isOnline } = req.body;
+    const result = yield driver_service_1.DriverService.updateDriverStatus(userId, isOnline);
+    (0, sendResponse_1.sendResponse)(res, {
+        success: true,
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver status updated successfully",
+        data: result,
+    });
+}));
+const getDriverStats = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.user;
+    const result = yield driver_service_1.DriverService.getDriverStats(userId);
+    (0, sendResponse_1.sendResponse)(res, {
+        success: true,
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver stats retrieved successfully",
+        data: result,
+    });
+}));
+const getDriverEarnings = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.user;
+    const result = yield driver_service_1.DriverService.getDriverEarnings(userId);
+    (0, sendResponse_1.sendResponse)(res, {
+        success: true,
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver earnings retrieved successfully",
+        data: result,
+    });
+}));
+const getActiveRides = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.user;
+    const result = yield driver_service_1.DriverService.getActiveRides(userId);
+    (0, sendResponse_1.sendResponse)(res, {
+        success: true,
+        statusCode: http_status_codes_1.default.OK,
+        message: "Active rides retrieved successfully",
+        data: result,
+    });
+}));
 exports.DriverController = {
     applyToBeDriver,
     getAvailableRides,
@@ -92,4 +133,8 @@ exports.DriverController = {
     rejectRide: exports.rejectRide,
     updateRideStatus: exports.updateRideStatus,
     getRideHistory,
+    updateDriverStatus,
+    getDriverStats,
+    getDriverEarnings,
+    getActiveRides,
 };

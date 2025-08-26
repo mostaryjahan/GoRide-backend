@@ -101,6 +101,59 @@ const getRideHistory = catchAsync(async (req: Request, res: Response) => {
 
 
 
+const updateDriverStatus = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user as JwtPayload;
+  const { isOnline } = req.body;
+
+  const result = await DriverService.updateDriverStatus(userId, isOnline);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Driver status updated successfully",
+    data: result,
+  });
+});
+
+const getDriverStats = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user as JwtPayload;
+
+  const result = await DriverService.getDriverStats(userId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Driver stats retrieved successfully",
+    data: result,
+  });
+});
+
+const getDriverEarnings = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user as JwtPayload;
+
+  const result = await DriverService.getDriverEarnings(userId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Driver earnings retrieved successfully",
+    data: result,
+  });
+});
+
+const getActiveRides = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user as JwtPayload;
+
+  const result = await DriverService.getActiveRides(userId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Active rides retrieved successfully",
+    data: result,
+  });
+});
+
 export const DriverController = {
   applyToBeDriver,
   getAvailableRides,
@@ -108,4 +161,8 @@ export const DriverController = {
   rejectRide,
   updateRideStatus,
   getRideHistory,
+  updateDriverStatus,
+  getDriverStats,
+  getDriverEarnings,
+  getActiveRides,
 };

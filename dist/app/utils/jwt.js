@@ -12,8 +12,18 @@ const generateToken = (payload, secret, expiresIn) => {
     return token;
 };
 exports.generateToken = generateToken;
+// export const verifyToken = (token: string, secret: string) => {
+//   const verifiedToken = jwt.verify(token, secret);
+//   return verifiedToken;
+// };
 const verifyToken = (token, secret) => {
-    const verifiedToken = jsonwebtoken_1.default.verify(token, secret);
-    return verifiedToken;
+    try {
+        const verifiedToken = jsonwebtoken_1.default.verify(token, secret);
+        return verifiedToken;
+    }
+    catch (error) {
+        throw new Error('Invalid token');
+        console.log(error);
+    }
 };
 exports.verifyToken = verifyToken;

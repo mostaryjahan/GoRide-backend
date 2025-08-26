@@ -6,13 +6,13 @@ const ride_interface_1 = require("./ride.interface");
 const rideSchema = new mongoose_1.Schema({
     rider: {
         type: mongoose_1.Types.ObjectId,
-        ref: 'User',
+        ref: "User",
         required: true,
     },
     driver: {
         type: mongoose_1.Types.ObjectId,
-        ref: 'User',
-        default: null, // driver will be assigned after accepting
+        ref: "Driver",
+        default: null,
     },
     pickupLocation: {
         address: { type: String, required: true },
@@ -37,6 +37,11 @@ const rideSchema = new mongoose_1.Schema({
         type: Number,
         required: true,
     },
+    rating: {
+        type: Number,
+        min: 1,
+        max: 5,
+    },
     timestamps: {
         requestedAt: { type: Date, default: Date.now },
         acceptedAt: { type: Date },
@@ -49,8 +54,13 @@ const rideSchema = new mongoose_1.Schema({
         type: Boolean,
         default: false,
     },
+    paymentMethod: {
+        type: String,
+        enum: ["cash", "card"],
+        default: "cash",
+    },
 }, {
     timestamps: true,
-    versionKey: false
+    versionKey: false,
 });
-exports.Ride = (0, mongoose_1.model)('Ride', rideSchema);
+exports.Ride = (0, mongoose_1.model)("Ride", rideSchema);

@@ -32,6 +32,8 @@ const AppError_1 = __importDefault(require("../../errorHelpers/AppError"));
 const userTokens_1 = require("../../utils/userTokens");
 const setCookie_1 = require("../../utils/setCookie");
 const auth_service_1 = require("./auth.service");
+const env_1 = require("../../config/env");
+const user_model_1 = require("../user/user.model");
 const credentialsLogin = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     passport_1.default.authenticate("local", (err, user, info) => __awaiter(void 0, void 0, void 0, function* () {
         if (err) {
@@ -101,8 +103,37 @@ const resetPassword = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter
         data: null,
     });
 }));
+const googleCallbackController = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = req.user;
+    if (!user) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User Not Found");
+    }
+    const tokenInfo = yield (0, userTokens_1.createUserTokens)(user);
+    (0, setCookie_1.setAuthCookie)(res, tokenInfo);
+    // Google users are always riders, redirect to rider dashboard
+    res.redirect(`${env_1.envVars.FRONTEND_URL}/rider/dashboard?googleAuth=success`);
+}));
+const getMe = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const decodedToken = req.user;
+    if (!decodedToken || !decodedToken.email) {
+        throw new AppError_1.default(http_status_codes_1.default.UNAUTHORIZED, "User not authenticated");
+    }
+    const user = yield user_model_1.User.findOne({ email: decodedToken.email }).select('-password');
+    if (!user) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User not found");
+    }
+    (0, sendResponse_1.sendResponse)(res, {
+        success: true,
+        statusCode: http_status_codes_1.default.OK,
+        message: "User retrieved successfully",
+        data: user,
+    });
+}));
 exports.AuthControllers = {
     credentialsLogin,
     getNewAccessToken,
     logout,
+    resetPassword,
+    googleCallbackController,
+    getMe
 };

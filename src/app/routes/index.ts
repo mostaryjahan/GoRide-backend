@@ -4,6 +4,8 @@ import { UserRoutes } from "../modules/user/user.route";
 import { DriverRoutes } from "../modules/driver/driver.route";
 import { AdminRoutes } from "../modules/admin/admin.route";
 import { RideRoutes } from "../modules/ride/ride.route";
+import { LocationRoutes } from "../modules/location/location.route";
+import { PaymentRoutes } from "../modules/payment/payment.route";
 
 
 export const router = Router();
@@ -28,6 +30,14 @@ const moduleRoutes = [
   {
     path: "/rides",
     route: RideRoutes
+  },
+    {
+    path: "/location",
+    route: LocationRoutes
+  },
+  {
+    path: "/payment",
+    route: PaymentRoutes
   }
  
 ];

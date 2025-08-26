@@ -10,6 +10,6 @@ const validateRequest_1 = require("../../middlewares/validateRequest");
 const router = (0, express_1.Router)();
 router.post("/request", (0, checkAuth_1.checkAuth)(user_interface_1.Role.RIDER, user_interface_1.Role.ADMIN), (0, validateRequest_1.validateRequest)(ride_validation_1.createRideZodSchema), ride_controller_1.RideController.createRide);
 router.patch("/:id/cancel", (0, checkAuth_1.checkAuth)(user_interface_1.Role.RIDER), ride_controller_1.RideController.cancelRide);
-router.get("/me", (0, checkAuth_1.checkAuth)(user_interface_1.Role.RIDER), ride_controller_1.RideController.getMyRides);
+router.get("/me", (0, checkAuth_1.checkAuth)(user_interface_1.Role.RIDER, user_interface_1.Role.DRIVER), ride_controller_1.RideController.getMyRides);
 router.get("/:id", (0, checkAuth_1.checkAuth)(user_interface_1.Role.RIDER), ride_controller_1.RideController.getSingleRide);
 exports.RideRoutes = router;

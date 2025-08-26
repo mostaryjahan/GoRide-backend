@@ -14,5 +14,9 @@ router.patch("/rides/:id/accept", checkAuth(Role.DRIVER), DriverController.accep
 router.patch("/rides/:id/reject", checkAuth(Role.DRIVER), DriverController.rejectRide);
 router.patch("/rides/:id/status", checkAuth(Role.DRIVER), DriverController.updateRideStatus);
 router.get("/earning-history", checkAuth(Role.DRIVER), DriverController.getRideHistory);
+router.patch("/status", checkAuth(Role.DRIVER, Role.RIDER), DriverController.updateDriverStatus);
+router.get("/stats", checkAuth(Role.DRIVER), DriverController.getDriverStats);
+router.get("/earnings", checkAuth(Role.DRIVER), DriverController.getDriverEarnings);
+router.get("/active-rides", checkAuth(Role.DRIVER), DriverController.getActiveRides);
 
 export const DriverRoutes = router;

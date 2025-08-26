@@ -22,6 +22,7 @@ const createRide = (riderId, payload) => __awaiter(void 0, void 0, void 0, funct
     if (!riderId) {
         throw new AppError_1.default(http_status_codes_1.default.UNAUTHORIZED, "Unauthorized access");
     }
+    // console.log('Creating ride with payload:', payload);
     const existingRide = yield ride_model_1.Ride.findOne({
         rider: riderId,
         status: {
@@ -36,18 +37,26 @@ const createRide = (riderId, payload) => __awaiter(void 0, void 0, void 0, funct
     if (existingRide) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You already have an active ride in progress");
     }
-    const ride = yield ride_model_1.Ride.create({
-        rider: riderId,
-        pickupLocation: payload.pickupLocation,
-        destinationLocation: payload.destinationLocation,
-        status: ride_interface_1.RideStatus.REQUESTED,
-        fare: payload.fare,
-        isPaid: false,
-        timestamps: {
-            requestedAt: new Date(),
-        },
-    });
-    return ride;
+    try {
+        const ride = yield ride_model_1.Ride.create({
+            rider: riderId,
+            pickupLocation: payload.pickupLocation,
+            destinationLocation: payload.destinationLocation,
+            status: ride_interface_1.RideStatus.REQUESTED,
+            fare: payload.fare,
+            isPaid: payload.paymentMethod === 'cash' ? true : false,
+            paymentMethod: payload.paymentMethod || 'cash',
+            timestamps: {
+                requestedAt: new Date(),
+            },
+        });
+        // console.log('Ride created successfully:', ride._id);
+        return ride;
+    }
+    catch (error) {
+        // console.error('Error creating ride:', error);
+        throw error;
+    }
 });
 const cancelRide = (rideId, riderId) => __awaiter(void 0, void 0, void 0, function* () {
     if (!(0, mongoose_1.isValidObjectId)(rideId)) {
@@ -64,6 +73,13 @@ const cancelRide = (rideId, riderId) => __awaiter(void 0, void 0, void 0, functi
         ride.status !== ride_interface_1.RideStatus.ACCEPTED) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, `Cannot cancel a ride at '${ride.status}' stage`);
     }
+    // Check if within 5-minute cancel window
+    const requestTime = ride.timestamps.requestedAt || ride.createdAt;
+    const now = new Date();
+    const timeDiff = (now.getTime() - requestTime.getTime()) / (1000 * 60); // minutes
+    if (timeDiff > 5) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Cancel window expired. You can only cancel within 5 minutes of requesting");
+    }
     ride.status = ride_interface_1.RideStatus.CANCELLED;
     ride.timestamps.cancelledAt = new Date();
     yield ride.save();
@@ -77,11 +93,20 @@ const getSingleRide = (rideId, riderId) => __awaiter(void 0, void 0, void 0, fun
     if (!(0, mongoose_1.isValidObjectId)(rideId)) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Invalid ride ID");
     }
-    const ride = yield ride_model_1.Ride.findById(rideId);
+    const ride = yield ride_model_1.Ride.findById(rideId)
+        .populate({
+        path: 'driver',
+        select: 'vehicleType vehicleNumber',
+        populate: {
+            path: 'user',
+            select: 'name phone'
+        }
+    })
+        .populate('rider', 'name phone');
     if (!ride) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Ride not found");
     }
-    if (ride.rider.toString() !== riderId) {
+    if (ride.rider._id.toString() !== riderId) {
         throw new AppError_1.default(http_status_codes_1.default.FORBIDDEN, "You are not authorized to view this ride");
     }
     return ride;

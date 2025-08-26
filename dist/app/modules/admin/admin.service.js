@@ -19,32 +19,36 @@ const user_model_1 = require("../user/user.model");
 const user_interface_1 = require("../user/user.interface");
 const ride_model_1 = require("../ride/ride.model");
 const driver_model_1 = require("../driver/driver.model");
-const driver_interface_1 = require("../driver/driver.interface");
 const ride_interface_1 = require("../ride/ride.interface");
-const approveDriver = (driverId) => __awaiter(void 0, void 0, void 0, function* () {
-    const existingDriver = yield driver_model_1.Driver.findById(driverId);
-    if (!existingDriver) {
-        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
+const approveDriver = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const existingUser = yield user_model_1.User.findById(userId);
+    if (!existingUser) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User not found");
     }
-    if (existingDriver.approvalStatus === driver_interface_1.IsApprove.APPROVED) {
+    if (existingUser.role !== user_interface_1.Role.DRIVER) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "User is not a driver");
+    }
+    if (existingUser.isApproved) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver is already approved");
     }
-    existingDriver.approvalStatus = driver_interface_1.IsApprove.APPROVED;
-    yield existingDriver.save();
-    yield user_model_1.User.findByIdAndUpdate(existingDriver.user, { role: user_interface_1.Role.DRIVER });
-    return existingDriver;
+    existingUser.isApproved = true;
+    yield existingUser.save();
+    return existingUser;
 });
-const suspendDriver = (driverId) => __awaiter(void 0, void 0, void 0, function* () {
-    const existingDriver = yield driver_model_1.Driver.findById(driverId);
-    if (!existingDriver) {
-        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
+const suspendDriver = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const existingUser = yield user_model_1.User.findById(userId);
+    if (!existingUser) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User not found");
     }
-    if (existingDriver.approvalStatus === driver_interface_1.IsApprove.SUSPENDED) {
-        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver is already suspended");
+    if (existingUser.role !== user_interface_1.Role.DRIVER) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "User is not a driver");
     }
-    existingDriver.approvalStatus = driver_interface_1.IsApprove.SUSPENDED;
-    yield existingDriver.save();
-    return existingDriver;
+    if (!existingUser.isApproved) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver is not approved yet");
+    }
+    existingUser.isApproved = false;
+    yield existingUser.save();
+    return existingUser;
 });
 const blockUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const existingUser = yield user_model_1.User.findById(userId);
@@ -77,7 +81,15 @@ const getAllDrivers = () => __awaiter(void 0, void 0, void 0, function* () {
     return yield driver_model_1.Driver.find().populate("user", "-password");
 });
 const getAllRides = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield ride_model_1.Ride.find().populate("rider", "-password").populate("driver");
+    return yield ride_model_1.Ride.find()
+        .populate("rider", "-password")
+        .populate({
+        path: "driver",
+        populate: {
+            path: "user",
+            select: "-password",
+        },
+    });
 });
 const generateAdminReport = () => __awaiter(void 0, void 0, void 0, function* () {
     var _a;

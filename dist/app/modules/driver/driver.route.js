@@ -14,4 +14,8 @@ router.patch("/rides/:id/accept", (0, checkAuth_1.checkAuth)(user_interface_1.Ro
 router.patch("/rides/:id/reject", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.rejectRide);
 router.patch("/rides/:id/status", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.updateRideStatus);
 router.get("/earning-history", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.getRideHistory);
+router.patch("/status", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER, user_interface_1.Role.RIDER), driver_controller_1.DriverController.updateDriverStatus);
+router.get("/stats", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.getDriverStats);
+router.get("/earnings", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.getDriverEarnings);
+router.get("/active-rides", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.getActiveRides);
 exports.DriverRoutes = router;

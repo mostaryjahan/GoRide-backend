@@ -44,50 +44,6 @@ const updateUser = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(vo
         data: user,
     });
 }));
-// get all users
-// const getAllUser = catchAsync(
-//   async (req: Request, res: Response, next: NextFunction) => {
-//     const result = await UserServices.getAllUser();
-//     sendResponse(res, {
-//       success: true,
-//       statusCode: httpStatus.OK,
-//       message: "All Users Retrieved Successfully",
-//       data: result.data
-//     });
-//   }
-// );
-// blocked user
-// const blockUser = catchAsync(async (req: Request, res: Response) => {
-//   const userId = req.params.id;
-//   const verifiedToken = req.user;
-//   if (!verifiedToken) {
-//     throw new AppError(httpStatus.UNAUTHORIZED, 'Unauthorized');
-//   }
-//   const { isBlock } = req.body;
-//   const user = await UserServices.blockUser(userId, isBlock, verifiedToken);
-//   sendResponse(res, {
-//     success: true,
-//     statusCode: httpStatus.OK,
-//     message: `User ${isBlock === 'BLOCK' ? 'blocked' : 'unblocked'} successfully`,
-//     data: user,
-//   });
-// });
-// approved Driver
-// const approveDriver = catchAsync(async (req: Request, res: Response) => {
-//   const userId = req.params.id;
-//   const verifiedToken = req.user;
-//   if (!verifiedToken) {
-//     throw new AppError(httpStatus.UNAUTHORIZED, 'Unauthorized');
-//   }
-//   const { isApproved } = req.body;
-//   const user = await UserServices.approveDriver(userId, isApproved, verifiedToken);
-//   sendResponse(res, {
-//     success: true,
-//     statusCode: httpStatus.OK,
-//     message: `Driver ${isApproved ? 'approved' : 'rejected'} successfully`,
-//     data: user,
-//   });
-// });
 exports.UserControllers = {
     createUser,
     updateUser,

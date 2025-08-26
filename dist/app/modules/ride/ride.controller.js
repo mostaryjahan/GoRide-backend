@@ -20,7 +20,7 @@ const http_status_codes_1 = __importDefault(require("http-status-codes"));
 const createRide = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const rider = req.user;
     const { userId } = rider;
-    //   console.log(rider);
+    // console.log('Ride request data:', req.body);
     const rideData = req.body;
     const result = yield ride_service_1.RideService.createRide(userId, rideData);
     (0, sendResponse_1.sendResponse)(res, {

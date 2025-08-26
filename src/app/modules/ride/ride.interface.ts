@@ -26,6 +26,7 @@ export interface IRide {
   destinationLocation: ILocation;
   status: RideStatus;
   fare: number;
+  rating?: number;
   timestamps: {
     requestedAt: Date;
     acceptedAt?: Date;
@@ -35,6 +36,7 @@ export interface IRide {
     cancelledAt?: Date;
   };
   isPaid: boolean;
+  paymentMethod?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

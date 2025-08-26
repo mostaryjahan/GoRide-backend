@@ -26,6 +26,18 @@ passport.use(
           return done(null, false, { message: "User does not exist" });
         }
 
+        // if (!isUserExist.isVerified) {
+        //   return done(null, false, { message: "User is not verified" });
+        // }
+
+        if (isUserExist.isBlock === IsBlock.BLOCK) {
+          return done(null, false, { message: "User is blocked" });
+        }
+
+        if (isUserExist.isDeleted) {
+          return done(null, false, { message: "User is deleted" });
+        }
+
         const isPasswordMatched = await bcryptjs.compare(
           password as string,
           isUserExist.password as string

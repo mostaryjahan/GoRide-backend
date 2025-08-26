@@ -11,7 +11,7 @@ const createRide = catchAsync(async (req: Request, res: Response, next: NextFunc
 
   const rider = req.user;
   const { userId } = rider as JwtPayload;
-//   console.log(rider);
+  // console.log('Ride request data:', req.body);
   const rideData = req.body;
   const result = await RideService.createRide(userId, rideData);
 

@@ -7,10 +7,12 @@ const user_route_1 = require("../modules/user/user.route");
 const driver_route_1 = require("../modules/driver/driver.route");
 const admin_route_1 = require("../modules/admin/admin.route");
 const ride_route_1 = require("../modules/ride/ride.route");
+const location_route_1 = require("../modules/location/location.route");
+const payment_route_1 = require("../modules/payment/payment.route");
 exports.router = (0, express_1.Router)();
 const moduleRoutes = [
     {
-        path: "/users",
+        path: "/user",
         route: user_route_1.UserRoutes,
     },
     {
@@ -28,6 +30,14 @@ const moduleRoutes = [
     {
         path: "/rides",
         route: ride_route_1.RideRoutes
+    },
+    {
+        path: "/location",
+        route: location_route_1.LocationRoutes
+    },
+    {
+        path: "/payment",
+        route: payment_route_1.PaymentRoutes
     }
 ];
 moduleRoutes.forEach((route) => {

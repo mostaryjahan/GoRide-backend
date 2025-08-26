@@ -1,17 +1,17 @@
-import { Schema, model, Types } from 'mongoose';
-import { IRide, RideStatus } from './ride.interface';
+import { Schema, model, Types } from "mongoose";
+import { IRide, RideStatus } from "./ride.interface";
 
 const rideSchema = new Schema(
   {
     rider: {
       type: Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     driver: {
       type: Types.ObjectId,
-      ref: 'User',
-      default: null, // driver will be assigned after accepting
+      ref: "Driver",
+      default: null,
     },
     pickupLocation: {
       address: { type: String, required: true },
@@ -36,6 +36,11 @@ const rideSchema = new Schema(
       type: Number,
       required: true,
     },
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+    },
     timestamps: {
       requestedAt: { type: Date, default: Date.now },
       acceptedAt: { type: Date },
@@ -48,11 +53,16 @@ const rideSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "card"],
+      default: "cash",
+    },
   },
   {
     timestamps: true,
-    versionKey: false
+    versionKey: false,
   }
 );
 
-export const Ride = model<IRide>('Ride', rideSchema);
+export const Ride = model<IRide>("Ride", rideSchema);

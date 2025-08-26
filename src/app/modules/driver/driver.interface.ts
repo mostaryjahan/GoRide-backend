@@ -20,6 +20,7 @@ export interface IDriver {
   approvalStatus: IsApprove;
   availabilityStatus: IsAvailable;
   earnings: number;
+  isVerified: { type: boolean, default: false },
   createdAt?: Date;
   updatedAt?: Date;
 }

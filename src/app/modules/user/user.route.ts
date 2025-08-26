@@ -11,20 +11,6 @@ const router = Router();
 
 router.post("/register", validateRequest(createUserZodSchema), UserControllers.createUser);
 
-// router.get(
-//   "/",
-//   checkAuth(Role.ADMIN),
-//   UserControllers.getAllUser
-// );
-
-
-router.patch('/:id', validateRequest(updateUserZodSchema), checkAuth(Role.ADMIN), UserControllers.updateUser);
-
-
-// router.patch('/block/:id', validateRequest(z.object({ isBlock: z.enum(['BLOCK', 'UNBLOCK'], { message: 'Invalid block status' }) })), checkAuth(Role.ADMIN), UserControllers.blockUser);
-
-
-
-// router.patch('/approve/:id', validateRequest(approveDriverZodSchema), checkAuth(Role.ADMIN), UserControllers.approveDriver);
+router.patch('/:id', validateRequest(updateUserZodSchema), checkAuth(Role.ADMIN, Role.RIDER, Role.DRIVER), UserControllers.updateUser);
 
 export const UserRoutes = router;

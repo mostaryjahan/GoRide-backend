@@ -81,54 +81,7 @@ const updateUser = (userId, payload, decodedToken) => __awaiter(void 0, void 0, 
     });
     return updatedUser;
 });
-// get all users
-// const getAllUser = async () => {
-//   const users = await User.find({});
-//   return {
-//     data: users,
-//   };
-// };
-// blocked user
-// const blockUser = async (userId: string, isBlock: IsBlock, decodedToken: JwtPayload) => {
-//   if (decodedToken.role !== Role.ADMIN) {
-//     throw new AppError(httpStatus.FORBIDDEN, 'Only admins can block/unblock users');
-//   }
-//   const user = await User.findById(userId);
-//   if (!user) {
-//     throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-//   }
-//   if (user.role === Role.ADMIN) {
-//     throw new AppError(httpStatus.FORBIDDEN, 'Cannot block/unblock an admin');
-//   }
-//   const updatedUser = await User.findByIdAndUpdate(
-//     userId,
-//     { isBlock },
-//     { new: true, runValidators: true }
-//   );
-//   return updatedUser;
-// };
-// approve driver
-// const approveDriver = async (userId: string, isApproved: boolean, decodedToken: JwtPayload) => {
-//   if (decodedToken.role !== Role.ADMIN) {
-//     throw new AppError(httpStatus.FORBIDDEN, 'Only admins can approve/reject drivers');
-//   }
-//   const user = await User.findById(userId);
-//   if (!user) {
-//     throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-//   }
-//   if (user.role !== Role.DRIVER) {
-//     throw new AppError(httpStatus.BAD_REQUEST, 'User is not a driver');
-//   }
-//   const updatedUser = await User.findByIdAndUpdate(
-//     userId,
-//     { isApproved },
-//     { new: true, runValidators: true }
-//   );
-//   return updatedUser;
-// };
 exports.UserServices = {
     createUser,
     updateUser,
-    // blockUser,
-    // approveDriver
 };

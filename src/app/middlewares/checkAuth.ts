@@ -12,9 +12,14 @@ export const checkAuth =
   (...authRoles: string[]) =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const accessToken = req.headers.authorization;
+      let accessToken = req.headers.authorization || req.cookies.accessToken;
       if (!accessToken) {
         throw new AppError(403, "No token received");
+      }
+
+      // Remove 'Bearer ' prefix if present
+      if (accessToken.startsWith('Bearer ')) {
+        accessToken = accessToken.slice(7);
       }
 
       const verifiedToken = verifyToken(
@@ -30,13 +35,10 @@ export const checkAuth =
         throw new AppError(httpStatus.BAD_REQUEST, "User does not exist");
       }
 
-      if (!isUserExist.isVerified) {
-        throw new AppError(httpStatus.BAD_REQUEST, "User is not Verified");
-      }
+      // if (!isUserExist.isVerified) {
+      //   throw new AppError(httpStatus.BAD_REQUEST, "User is not Verified");
+      // }
 
-      if (!isUserExist.isVerified) {
-        throw new AppError(httpStatus.BAD_REQUEST, "User is not Verified");
-      }
 
       if (isUserExist.isBlock === IsBlock.BLOCK) {
         throw new AppError(httpStatus.BAD_REQUEST, `User is Blocked`);
@@ -45,12 +47,15 @@ export const checkAuth =
       if (isUserExist.isDeleted) {
         throw new AppError(httpStatus.BAD_REQUEST, "User is Deleted");
       }
-
+      
       if (!authRoles.includes(verifiedToken.role)) {
-        throw new AppError(403, "You are not permitted to do this");
+        throw new AppError(403, "You are not permitted.");
       }
 
-      req.user = verifiedToken;
+      req.user = {
+        ...verifiedToken,
+        userId: isUserExist._id.toString()
+      };
       next();
     } catch (error) {
       next(error);
