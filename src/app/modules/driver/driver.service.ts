@@ -64,7 +64,7 @@ const acceptRide = async (rideId: string, driverUserId: string) => {
   ride.timestamps.acceptedAt = new Date();
   await ride.save();
   
-  console.log('Ride accepted - stored driver ID:', driver._id.toString());
+  
 
   driver.availabilityStatus = IsAvailable.OFFLINE;
   await driver.save();
@@ -97,7 +97,7 @@ const rejectRide = async (rideId: string, driverUserId: string) => {
   ride.status = RideStatus.REJECTED;
   await ride.save();
   
-  console.log('Ride rejected - stored driver ID:', driver._id.toString());
+ 
 
   driver.availabilityStatus = IsAvailable.ONLINE;
   await driver.save();
@@ -251,8 +251,8 @@ const getDriverStats = async (userId: string) => {
 
 const getDriverEarnings = async (userId: string) => {
   const driver = await Driver.findOne({ user: userId });
-    if (!driver || !driver.isVerified) {
-        throw new AppError(httpStatus.BAD_REQUEST, "Driver is not Verified");
+    if (!driver ) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Driver is not found");
       }
 
   const today = new Date();
@@ -301,14 +301,14 @@ const getDriverEarnings = async (userId: string) => {
 };
 
 const getActiveRides = async (userId: string) => {
-  console.log('getActiveRides called with userId:', userId);
+
   
   const driver = await Driver.findOne({ user: userId });
   if (!driver) {
     throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
   }
   
-  console.log('Driver found - ID:', driver._id, 'User:', driver.user);
+ 
 
   const activeRides = await Ride.find({
     $or: [
@@ -318,8 +318,7 @@ const getActiveRides = async (userId: string) => {
     status: { $in: ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'] }
   }).populate('rider', 'name email phone').sort({ createdAt: -1 });
   
-  console.log('Active rides found:', activeRides.length);
-  console.log('Query: driver =', driver._id.toString(), 'status in', ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT']);
+  
 
   return activeRides;
 };
