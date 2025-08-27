@@ -19,6 +19,7 @@ router.get("/stats", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), d
 router.get("/earnings", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.getDriverEarnings);
 router.get("/active-rides", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.getActiveRides);
 // driver.routes.ts
-router.get('/profile', (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.getDriverProfile);
-router.patch('/status', (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.updateDriverStatus);
+router.get("/profile", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.getDriverProfile);
+router.patch("/profile", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.updateDriverProfile);
+router.patch("/status", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.DriverController.updateDriverStatus);
 exports.DriverRoutes = router;

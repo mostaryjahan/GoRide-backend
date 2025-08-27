@@ -103,7 +103,7 @@ const getDriverStats = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void
     (0, sendResponse_1.sendResponse)(res, {
         statusCode: http_status_codes_1.default.OK,
         success: true,
-        message: 'Driver stats retrieved successfully',
+        message: "Driver stats retrieved successfully",
         data: result,
     });
 }));
@@ -137,6 +137,16 @@ const getDriverProfile = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(vo
         data: driver,
     });
 }));
+const updateDriverProfile = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.user;
+    const result = yield driver_service_1.DriverService.updateDriverProfile(userId, req.body);
+    (0, sendResponse_1.sendResponse)(res, {
+        success: true,
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver profile updated successfully",
+        data: result,
+    });
+}));
 exports.DriverController = {
     applyToBeDriver,
     getAvailableRides,
@@ -148,5 +158,6 @@ exports.DriverController = {
     getDriverStats,
     getDriverEarnings,
     getActiveRides,
-    getDriverProfile
+    getDriverProfile,
+    updateDriverProfile,
 };

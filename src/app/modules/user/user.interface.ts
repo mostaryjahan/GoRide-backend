@@ -26,6 +26,7 @@ export interface IUser {
   address?: string;
   isDeleted?: boolean;
   isBlock?: IsBlock;
+  isSuspended?: boolean;
   isVerified?: boolean;
   role: Role;
   auths: IAuthProvider[];

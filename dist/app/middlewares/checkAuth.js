@@ -18,14 +18,12 @@ const env_1 = require("../config/env");
 const user_model_1 = require("../modules/user/user.model");
 const http_status_codes_1 = __importDefault(require("http-status-codes"));
 const AppError_1 = __importDefault(require("../errorHelpers/AppError"));
-const user_interface_1 = require("../modules/user/user.interface");
 const checkAuth = (...authRoles) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         let accessToken = req.headers.authorization || req.cookies.accessToken;
         if (!accessToken) {
             throw new AppError_1.default(403, "No token received");
         }
-        // Remove 'Bearer ' prefix if present
         if (accessToken.startsWith('Bearer ')) {
             accessToken = accessToken.slice(7);
         }
@@ -39,9 +37,9 @@ const checkAuth = (...authRoles) => (req, res, next) => __awaiter(void 0, void 0
         // if (!isUserExist.isVerified) {
         //   throw new AppError(httpStatus.BAD_REQUEST, "User is not Verified");
         // }
-        if (isUserExist.isBlock === user_interface_1.IsBlock.BLOCK) {
-            throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, `User is Blocked`);
-        }
+        // if (isUserExist.isBlock === IsBlock.BLOCK) {
+        //   throw new AppError(httpStatus.BAD_REQUEST, `User is Blocked`);
+        // }
         if (isUserExist.isDeleted) {
             throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "User is Deleted");
         }

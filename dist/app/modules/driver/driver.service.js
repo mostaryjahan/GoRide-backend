@@ -43,9 +43,18 @@ const getAvailableRides = () => __awaiter(void 0, void 0, void 0, function* () {
     return availableRides;
 });
 const acceptRide = (rideId, driverUserId) => __awaiter(void 0, void 0, void 0, function* () {
-    const driver = yield driver_model_1.Driver.findOne({ user: driverUserId });
+    const driver = yield driver_model_1.Driver.findOne({ user: driverUserId }).populate("user");
     if (!driver) {
         throw new AppError_1.default(http_status_codes_1.default.FORBIDDEN, "Driver profile not found");
+    }
+    // Check if driver has vehicle info
+    if (!driver.vehicleType || !driver.vehicleNumber) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Please update your information from profile before accepting rides");
+    }
+    // Check if driver has phone number
+    const user = driver.user;
+    if (!user.phone) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Please update your information from profile before accepting rides");
     }
     if (driver.approvalStatus === driver_interface_1.IsApprove.SUSPENDED) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You are a SUSPENDED Driver. You can't accept Request");
@@ -151,7 +160,7 @@ const getRideHistory = (userId) => __awaiter(void 0, void 0, void 0, function* (
     };
 });
 const updateDriverStatus = (userId, isOnline) => __awaiter(void 0, void 0, void 0, function* () {
-    const driver = yield driver_model_1.Driver.findById({ user: userId });
+    const driver = yield driver_model_1.Driver.findOne({ user: userId });
     if (!driver) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver profile not found");
     }
@@ -159,7 +168,9 @@ const updateDriverStatus = (userId, isOnline) => __awaiter(void 0, void 0, void 
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Only approved drivers can update their status");
     }
     yield user_model_1.User.findByIdAndUpdate(userId, { isOnline });
-    driver.availabilityStatus = isOnline ? driver_interface_1.IsAvailable.ONLINE : driver_interface_1.IsAvailable.OFFLINE;
+    driver.availabilityStatus = isOnline
+        ? driver_interface_1.IsAvailable.ONLINE
+        : driver_interface_1.IsAvailable.OFFLINE;
     yield driver.save();
     return { isOnline, availabilityStatus: driver.availabilityStatus };
 });
@@ -178,11 +189,31 @@ const getActiveRides = (userId) => __awaiter(void 0, void 0, void 0, function* (
 });
 // driver.service.ts
 const getDriverProfile = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const driver = yield driver_model_1.Driver.findOne({ user: userId }).populate('user', '-password');
+    const driver = yield driver_model_1.Driver.findOne({ user: userId }).populate("user", "-password");
     if (!driver) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver profile not found");
     }
     return driver;
+});
+const updateDriverProfile = (userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    const driver = yield driver_model_1.Driver.findOne({ user: userId });
+    if (!driver) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver profile not found");
+    }
+    // Update driver-specific fields
+    if (payload.vehicleType)
+        driver.vehicleType = payload.vehicleType;
+    if (payload.vehicleNumber)
+        driver.vehicleNumber = payload.vehicleNumber;
+    yield driver.save();
+    // Update user fields
+    yield user_model_1.User.findByIdAndUpdate(userId, {
+        name: payload === null || payload === void 0 ? void 0 : payload.name,
+        phone: payload === null || payload === void 0 ? void 0 : payload.phone,
+        address: payload === null || payload === void 0 ? void 0 : payload.address,
+    });
+    const updatedDriver = yield driver_model_1.Driver.findOne({ user: userId }).populate("user", "-password");
+    return updatedDriver;
 });
 // Fix the getDriverStats function
 const getDriverStats = (userId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -190,15 +221,21 @@ const getDriverStats = (userId) => __awaiter(void 0, void 0, void 0, function* (
     if (!driver) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = new Date();
+    // Set today's start to midnight (00:00:00) of the current day
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    // Set today's end to just before midnight (23:59:59.999) of the current day
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
     // Get today's completed rides for this driver
     const todayRides = yield ride_model_1.Ride.find({
-        driver: driver._id, // Filter by driver ID
+        driver: driver._id,
         status: "COMPLETED",
-        createdAt: { $gte: today, $lt: tomorrow },
+        createdAt: {
+            $gte: todayStart,
+            $lte: todayEnd,
+        },
     });
     // Get all completed rides for this driver
     const [allCompletedRides, recentRides] = yield Promise.all([
@@ -235,24 +272,19 @@ const getDriverEarnings = (userId) => __awaiter(void 0, void 0, void 0, function
     if (!driver) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver not found");
     }
-    // Get current date in UTC and adjust for timezone
+    // Get current date in local timezone
     const now = new Date();
-    const timezoneOffset = now.getTimezoneOffset() * 60000; // offset in milliseconds
-    // Today's date range (local time)
-    const todayStart = new Date(now.getTime() - timezoneOffset);
+    // Set today's start to midnight (00:00:00) of the current day
+    const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(todayStart);
-    todayEnd.setDate(todayEnd.getDate() + 1);
+    // Set today's end to just before midnight (23:59:59.999) of the current day
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
     // Weekly date range (start of week)
     const weekStart = new Date(todayStart);
     weekStart.setDate(todayStart.getDate() - todayStart.getDay()); // Sunday of this week
     // Monthly date range (start of month)
     const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
-    console.log('Date ranges:', {
-        today: { start: todayStart, end: todayEnd },
-        week: { start: weekStart },
-        month: { start: monthStart }
-    });
     // Get rides for different periods for this specific driver
     const [todayRides, weeklyRides, monthlyRides, allRides] = yield Promise.all([
         ride_model_1.Ride.find({
@@ -260,30 +292,36 @@ const getDriverEarnings = (userId) => __awaiter(void 0, void 0, void 0, function
             status: "COMPLETED",
             createdAt: {
                 $gte: todayStart,
-                $lt: todayEnd
+                $lte: todayEnd,
             },
-        }),
+        })
+            .populate("rider")
+            .sort({ createdAt: -1 }),
         ride_model_1.Ride.find({
             driver: driver._id,
             status: "COMPLETED",
             createdAt: { $gte: weekStart },
-        }),
+        })
+            .populate("rider")
+            .sort({ createdAt: -1 }),
         ride_model_1.Ride.find({
             driver: driver._id,
             status: "COMPLETED",
             createdAt: { $gte: monthStart },
-        }),
+        })
+            .populate("rider")
+            .sort({ createdAt: -1 }),
         ride_model_1.Ride.find({
             driver: driver._id,
             status: "COMPLETED",
         })
+            .populate("rider")
             .sort({ createdAt: -1 })
             .limit(10),
     ]);
-    console.log('Today rides count:', todayRides.length);
-    console.log('Today rides:', todayRides.map(r => ({
+    console.log("Today rides:", todayRides.map((r) => ({
         fare: r.fare,
-        createdAt: r.createdAt
+        createdAt: r.createdAt,
     })));
     return {
         todayEarnings: todayRides.reduce((sum, ride) => sum + ride.fare, 0),
@@ -307,5 +345,6 @@ exports.DriverService = {
     getDriverStats,
     getDriverEarnings,
     getActiveRides,
-    getDriverProfile
+    getDriverProfile,
+    updateDriverProfile,
 };

@@ -6,7 +6,6 @@ import { User } from "../modules/user/user.model";
 
 import httpStatus from "http-status-codes";
 import AppError from "../errorHelpers/AppError";
-import { IsBlock } from "../modules/user/user.interface";
 
 export const checkAuth =
   (...authRoles: string[]) =>
@@ -17,7 +16,7 @@ export const checkAuth =
         throw new AppError(403, "No token received");
       }
 
-      // Remove 'Bearer ' prefix if present
+
       if (accessToken.startsWith('Bearer ')) {
         accessToken = accessToken.slice(7);
       }
@@ -40,9 +39,10 @@ export const checkAuth =
       // }
 
 
-      if (isUserExist.isBlock === IsBlock.BLOCK) {
-        throw new AppError(httpStatus.BAD_REQUEST, `User is Blocked`);
-      }
+      // if (isUserExist.isBlock === IsBlock.BLOCK) {
+      //   throw new AppError(httpStatus.BAD_REQUEST, `User is Blocked`);
+      // }
+
 
       if (isUserExist.isDeleted) {
         throw new AppError(httpStatus.BAD_REQUEST, "User is Deleted");

@@ -5,6 +5,7 @@ import { UserServices } from "./user.service";
 import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status-codes";
 import AppError from "../../errorHelpers/AppError";
+import { User } from "./user.model";
 
 // create new user
 const createUser = catchAsync(

@@ -22,6 +22,7 @@ const driver_model_1 = require("../driver/driver.model");
 const ride_interface_1 = require("../ride/ride.interface");
 const driver_interface_1 = require("../driver/driver.interface");
 const approveDriver = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     const existingUser = yield user_model_1.User.findById(userId);
     if (!existingUser) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User not found");
@@ -29,18 +30,32 @@ const approveDriver = (userId) => __awaiter(void 0, void 0, void 0, function* ()
     if (existingUser.role !== user_interface_1.Role.DRIVER) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "User is not a driver");
     }
-    if (existingUser.isApproved) {
-        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver is already approved");
-    }
-    existingUser.isApproved = true;
-    yield existingUser.save();
-    const driver = yield driver_model_1.Driver.findOne({ user: userId });
+    // First find or create the driver record
+    let driver = yield driver_model_1.Driver.findOne({ user: userId });
     if (!driver) {
-        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver profile not found");
+        // If no driver record exists, create one with default values
+        driver = yield driver_model_1.Driver.create({
+            user: userId,
+            vehicleType: ((_a = existingUser.vehicleInfo) === null || _a === void 0 ? void 0 : _a.type) || "Not Specified",
+            vehicleNumber: ((_b = existingUser.vehicleInfo) === null || _b === void 0 ? void 0 : _b.licensePlate) || "Not Specified",
+            approvalStatus: driver_interface_1.IsApprove.APPROVED,
+            availabilityStatus: "OFFLINE",
+            earnings: 0,
+        });
     }
-    driver.approvalStatus = driver_interface_1.IsApprove.APPROVED;
-    yield driver.save();
-    return { user: existingUser, driver };
+    else {
+        // Update existing driver record
+        driver.approvalStatus = driver_interface_1.IsApprove.APPROVED;
+        yield driver.save();
+    }
+    // Update user record
+    existingUser.isApproved = true;
+    existingUser.isVerified = true;
+    yield existingUser.save();
+    return {
+        user: existingUser,
+        driver: driver,
+    };
 });
 const suspendDriver = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const existingUser = yield user_model_1.User.findById(userId);

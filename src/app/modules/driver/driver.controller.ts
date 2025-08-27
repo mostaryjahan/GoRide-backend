@@ -7,20 +7,22 @@ import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status-codes";
 import { JwtPayload } from "jsonwebtoken";
 
-const applyToBeDriver = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const user = req.user;
+const applyToBeDriver = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user;
 
-  const {userId} = user as JwtPayload;
+    const { userId } = user as JwtPayload;
 
-  const driver = await DriverService.applyToBeDriver(userId, req.body);
+    const driver = await DriverService.applyToBeDriver(userId, req.body);
 
-  sendResponse(res, {
-    success: true,
-    statusCode: httpStatus.CREATED,
-    message: "Driver application submitted successfully.",
-    data: driver,
-  });
-});
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.CREATED,
+      message: "Driver application submitted successfully.",
+      data: driver,
+    });
+  }
+);
 
 const getAvailableRides = catchAsync(async (req: Request, res: Response) => {
   const rides = await DriverService.getAvailableRides();
@@ -32,12 +34,11 @@ const getAvailableRides = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
 const acceptRide = catchAsync(async (req: Request, res: Response) => {
   const rideId = req.params.id;
   const user = req.user;
 
-  const {userId} = user as JwtPayload;
+  const { userId } = user as JwtPayload;
 
   const result = await DriverService.acceptRide(rideId, userId);
 
@@ -49,12 +50,11 @@ const acceptRide = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
 export const rejectRide = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = req.user;
 
-  const {userId} = user as JwtPayload;
+  const { userId } = user as JwtPayload;
 
   const result = await DriverService.rejectRide(id, userId);
 
@@ -66,28 +66,28 @@ export const rejectRide = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+export const updateRideStatus = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const user = req.user;
 
-export const updateRideStatus = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const user = req.user;
+    const { userId } = user as JwtPayload;
 
-  const {userId} = user as JwtPayload;
+    const result = await DriverService.updateRideStatus(id, userId);
 
-  const result = await DriverService.updateRideStatus(id, userId);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "Ride status updated successfully",
-    data: result,
-  });
-});
-
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Ride status updated successfully",
+      data: result,
+    });
+  }
+);
 
 const getRideHistory = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
 
-  const {userId} = user as JwtPayload;
+  const { userId } = user as JwtPayload;
 
   const result = await DriverService.getRideHistory(userId);
 
@@ -98,8 +98,6 @@ const getRideHistory = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
-
-
 
 const updateDriverStatus = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user as JwtPayload;
@@ -121,7 +119,7 @@ const getDriverStats = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Driver stats retrieved successfully',
+    message: "Driver stats retrieved successfully",
     data: result,
   });
 });
@@ -155,12 +153,24 @@ const getActiveRides = catchAsync(async (req: Request, res: Response) => {
 const getDriverProfile = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user as JwtPayload;
   const driver = await DriverService.getDriverProfile(userId);
-  
+
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
     message: "Driver profile fetched successfully",
     data: driver,
+  });
+});
+
+const updateDriverProfile = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user as JwtPayload;
+  const result = await DriverService.updateDriverProfile(userId, req.body);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Driver profile updated successfully",
+    data: result,
   });
 });
 
@@ -175,5 +185,6 @@ export const DriverController = {
   getDriverStats,
   getDriverEarnings,
   getActiveRides,
-  getDriverProfile
+  getDriverProfile,
+  updateDriverProfile,
 };

@@ -19,23 +19,34 @@ const approveDriver = async (userId: string) => {
     throw new AppError(httpStatus.BAD_REQUEST, "User is not a driver");
   }
 
-  if (existingUser.isApproved) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Driver is already approved");
-  }
+  // First find or create the driver record
+  let driver = await Driver.findOne({ user: userId });
 
-  existingUser.isApproved = true;
-  await existingUser.save();
-   
-  const driver = await Driver.findOne({ user: userId });
-  
   if (!driver) {
-    throw new AppError(httpStatus.NOT_FOUND, "Driver profile not found");
+    // If no driver record exists, create one with default values
+    driver = await Driver.create({
+      user: userId,
+      vehicleType: existingUser.vehicleInfo?.type || "Not Specified",
+      vehicleNumber: existingUser.vehicleInfo?.licensePlate || "Not Specified",
+      approvalStatus: IsApprove.APPROVED,
+      availabilityStatus: "OFFLINE",
+      earnings: 0,
+    });
+  } else {
+    // Update existing driver record
+    driver.approvalStatus = IsApprove.APPROVED;
+    await driver.save();
   }
 
-  driver.approvalStatus = IsApprove.APPROVED;
-  await driver.save();
+  // Update user record
+  existingUser.isApproved = true;
+  existingUser.isVerified = true;
+  await existingUser.save();
 
-  return { user: existingUser, driver };
+  return {
+    user: existingUser,
+    driver: driver,
+  };
 };
 
 const suspendDriver = async (userId: string) => {
@@ -56,9 +67,9 @@ const suspendDriver = async (userId: string) => {
   existingUser.isApproved = false;
   await existingUser.save();
 
-   const driver = await Driver.findOne({ user: userId });
+  const driver = await Driver.findOne({ user: userId });
 
-   if (driver) {
+  if (driver) {
     // Update Driver collection
     driver.approvalStatus = IsApprove.SUSPENDED;
     await driver.save();

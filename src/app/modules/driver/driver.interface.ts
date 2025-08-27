@@ -15,6 +15,9 @@ export enum IsAvailable {
 export interface IDriver {
   _id?: Types.ObjectId;
   user: Types.ObjectId;
+  name?: string;
+  phone?: string;
+  address?: string;
   vehicleType: string;
   vehicleNumber: string;
   approvalStatus: IsApprove;
