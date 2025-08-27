@@ -20,11 +20,13 @@ const http_status_codes_1 = __importDefault(require("http-status-codes"));
 const ride_model_1 = require("../ride/ride.model");
 const ride_interface_1 = require("../ride/ride.interface");
 const user_model_1 = require("../user/user.model");
+const user_interface_1 = require("../user/user.interface");
 const applyToBeDriver = (userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const isAlreadyDriver = yield driver_model_1.Driver.findOne({ user: userId });
     if (isAlreadyDriver) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You have already applied or are already a driver.");
     }
+    yield user_model_1.User.findByIdAndUpdate(userId, { role: user_interface_1.Role.DRIVER });
     const newDriver = yield driver_model_1.Driver.create({
         user: userId,
         vehicleType: payload.vehicleType,
@@ -46,7 +48,7 @@ const acceptRide = (rideId, driverUserId) => __awaiter(void 0, void 0, void 0, f
         throw new AppError_1.default(http_status_codes_1.default.FORBIDDEN, "Driver profile not found");
     }
     if (driver.approvalStatus === driver_interface_1.IsApprove.SUSPENDED) {
-        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You are a SUSPENDED Driver. You cann't accept Request");
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You are a SUSPENDED Driver. You can't accept Request");
     }
     const ride = yield ride_model_1.Ride.findById(rideId);
     if (!ride) {
@@ -94,8 +96,9 @@ const updateRideStatus = (rideId, driverUserId) => __awaiter(void 0, void 0, voi
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Ride not found");
     }
     // Check if driver is assigned (handle both driver._id and userId)
-    const isAssigned = ride.driver && (ride.driver.toString() === driver._id.toString() ||
-        ride.driver.toString() === driverUserId);
+    const isAssigned = ride.driver &&
+        (ride.driver.toString() === driver._id.toString() ||
+            ride.driver.toString() === driverUserId);
     if (!isAssigned) {
         throw new AppError_1.default(http_status_codes_1.default.FORBIDDEN, "You are not assigned to this ride");
     }
@@ -131,12 +134,13 @@ const getRideHistory = (userId) => __awaiter(void 0, void 0, void 0, function* (
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
     }
     const rides = yield ride_model_1.Ride.find({ driver: driver._id })
-        .populate('rider', 'name email phone')
+        .populate("rider", "name email phone")
         .sort({ createdAt: -1 });
-    const completedRides = rides.filter(ride => ride.status === 'COMPLETED');
+    const completedRides = rides.filter((ride) => ride.status === "COMPLETED");
     const totalEarnings = completedRides.reduce((sum, ride) => sum + ride.fare, 0);
     const averageRating = completedRides.length > 0
-        ? (completedRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) / completedRides.length).toFixed(1)
+        ? (completedRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) /
+            completedRides.length).toFixed(1)
         : 0;
     return {
         totalRides: rides.length,
@@ -147,41 +151,73 @@ const getRideHistory = (userId) => __awaiter(void 0, void 0, void 0, function* (
     };
 });
 const updateDriverStatus = (userId, isOnline) => __awaiter(void 0, void 0, void 0, function* () {
-    const user = yield user_model_1.User.findById(userId);
-    if (!user) {
-        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User not found");
+    const driver = yield driver_model_1.Driver.findById({ user: userId });
+    if (!driver) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver profile not found");
     }
-    if (user.role !== 'DRIVER') {
-        throw new AppError_1.default(http_status_codes_1.default.FORBIDDEN, "Only drivers can update online status");
+    if (driver.approvalStatus !== driver_interface_1.IsApprove.APPROVED) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Only approved drivers can update their status");
     }
-    const updatedUser = yield user_model_1.User.findByIdAndUpdate(userId, { isOnline }, { new: true, runValidators: true }).select('-password');
-    return updatedUser;
+    yield user_model_1.User.findByIdAndUpdate(userId, { isOnline });
+    driver.availabilityStatus = isOnline ? driver_interface_1.IsAvailable.ONLINE : driver_interface_1.IsAvailable.OFFLINE;
+    yield driver.save();
+    return { isOnline, availabilityStatus: driver.availabilityStatus };
 });
+const getActiveRides = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const driver = yield driver_model_1.Driver.findOne({ user: userId });
+    if (!driver) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
+    }
+    const activeRides = yield ride_model_1.Ride.find({
+        $or: [{ driver: driver._id }, { driver: userId }],
+        status: { $in: ["ACCEPTED", "PICKED_UP", "IN_TRANSIT"] },
+    })
+        .populate("rider", "name email phone")
+        .sort({ createdAt: -1 });
+    return activeRides;
+});
+// driver.service.ts
+const getDriverProfile = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const driver = yield driver_model_1.Driver.findOne({ user: userId }).populate('user', '-password');
+    if (!driver) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver profile not found");
+    }
+    return driver;
+});
+// Fix the getDriverStats function
 const getDriverStats = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const driver = yield driver_model_1.Driver.findOne({ user: userId });
+    if (!driver) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    // Get today's completed rides
+    // Get today's completed rides for this driver
     const todayRides = yield ride_model_1.Ride.find({
-        driver: userId,
-        status: 'COMPLETED',
-        createdAt: { $gte: today, $lt: tomorrow }
+        driver: driver._id, // Filter by driver ID
+        status: "COMPLETED",
+        createdAt: { $gte: today, $lt: tomorrow },
     });
-    // Get all completed rides for average rating and recent rides
+    // Get all completed rides for this driver
     const [allCompletedRides, recentRides] = yield Promise.all([
         ride_model_1.Ride.find({
-            driver: userId,
-            status: 'COMPLETED'
+            driver: driver._id, // Filter by driver ID
+            status: "COMPLETED",
         }),
         ride_model_1.Ride.find({
-            driver: userId
-        }).sort({ createdAt: -1 }).limit(5).populate('rider', 'name')
+            driver: driver._id, // Filter by driver ID
+        })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .populate("rider", "name"),
     ]);
     const todayEarnings = todayRides.reduce((sum, ride) => sum + ride.fare, 0);
     const totalRides = allCompletedRides.length;
     const averageRating = totalRides > 0
-        ? (allCompletedRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) / totalRides).toFixed(1)
+        ? (allCompletedRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) /
+            totalRides).toFixed(1)
         : 0;
     return {
         todayEarnings,
@@ -189,44 +225,66 @@ const getDriverStats = (userId) => __awaiter(void 0, void 0, void 0, function* (
         totalRides,
         averageRating,
         hoursOnline: 0,
-        earningsChange: '+0%',
-        recentRides
+        earningsChange: "+0%",
+        recentRides,
     };
 });
+// Fix the getDriverEarnings function
 const getDriverEarnings = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const driver = yield driver_model_1.Driver.findOne({ user: userId });
     if (!driver) {
-        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver is not found");
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Driver not found");
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    // Get rides for different periods
+    // Get current date in UTC and adjust for timezone
+    const now = new Date();
+    const timezoneOffset = now.getTimezoneOffset() * 60000; // offset in milliseconds
+    // Today's date range (local time)
+    const todayStart = new Date(now.getTime() - timezoneOffset);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    // Weekly date range (start of week)
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(todayStart.getDate() - todayStart.getDay()); // Sunday of this week
+    // Monthly date range (start of month)
+    const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
+    console.log('Date ranges:', {
+        today: { start: todayStart, end: todayEnd },
+        week: { start: weekStart },
+        month: { start: monthStart }
+    });
+    // Get rides for different periods for this specific driver
     const [todayRides, weeklyRides, monthlyRides, allRides] = yield Promise.all([
         ride_model_1.Ride.find({
             driver: driver._id,
-            status: 'COMPLETED',
-            createdAt: { $gte: today, $lt: tomorrow }
+            status: "COMPLETED",
+            createdAt: {
+                $gte: todayStart,
+                $lt: todayEnd
+            },
         }),
         ride_model_1.Ride.find({
             driver: driver._id,
-            status: 'COMPLETED',
-            createdAt: { $gte: weekStart }
+            status: "COMPLETED",
+            createdAt: { $gte: weekStart },
         }),
         ride_model_1.Ride.find({
             driver: driver._id,
-            status: 'COMPLETED',
-            createdAt: { $gte: monthStart }
+            status: "COMPLETED",
+            createdAt: { $gte: monthStart },
         }),
         ride_model_1.Ride.find({
             driver: driver._id,
-            status: 'COMPLETED'
-        }).sort({ createdAt: -1 }).limit(10)
+            status: "COMPLETED",
+        })
+            .sort({ createdAt: -1 })
+            .limit(10),
     ]);
+    console.log('Today rides count:', todayRides.length);
+    console.log('Today rides:', todayRides.map(r => ({
+        fare: r.fare,
+        createdAt: r.createdAt
+    })));
     return {
         todayEarnings: todayRides.reduce((sum, ride) => sum + ride.fare, 0),
         todayRides: todayRides.length,
@@ -235,22 +293,8 @@ const getDriverEarnings = (userId) => __awaiter(void 0, void 0, void 0, function
         monthlyEarnings: monthlyRides.reduce((sum, ride) => sum + ride.fare, 0),
         monthlyRides: monthlyRides.length,
         totalEarnings: allRides.reduce((sum, ride) => sum + ride.fare, 0),
-        recentEarnings: allRides
+        recentEarnings: allRides,
     };
-});
-const getActiveRides = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const driver = yield driver_model_1.Driver.findOne({ user: userId });
-    if (!driver) {
-        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
-    }
-    const activeRides = yield ride_model_1.Ride.find({
-        $or: [
-            { driver: driver._id },
-            { driver: userId }
-        ],
-        status: { $in: ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'] }
-    }).populate('rider', 'name email phone').sort({ createdAt: -1 });
-    return activeRides;
 });
 exports.DriverService = {
     applyToBeDriver,
@@ -263,4 +307,5 @@ exports.DriverService = {
     getDriverStats,
     getDriverEarnings,
     getActiveRides,
+    getDriverProfile
 };

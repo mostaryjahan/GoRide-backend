@@ -5,6 +5,7 @@ import httpStatus from "http-status-codes";
 import { Ride } from "../ride/ride.model";
 import { RideStatus } from "../ride/ride.interface";
 import { User } from "../user/user.model";
+import { Role } from "../user/user.interface";
 
 const applyToBeDriver = async (userId: string, payload: Partial<IDriver>) => {
   const isAlreadyDriver = await Driver.findOne({ user: userId });
@@ -15,6 +16,8 @@ const applyToBeDriver = async (userId: string, payload: Partial<IDriver>) => {
       "You have already applied or are already a driver."
     );
   }
+    await User.findByIdAndUpdate(userId, { role: Role.DRIVER });
+
 
   const newDriver = await Driver.create({
     user: userId,
@@ -42,8 +45,13 @@ const acceptRide = async (rideId: string, driverUserId: string) => {
     throw new AppError(httpStatus.FORBIDDEN, "Driver profile not found");
   }
 
-  if(driver.approvalStatus === IsApprove.SUSPENDED) {
-    throw new AppError(httpStatus.BAD_REQUEST, "You are a SUSPENDED Driver. You cann't accept Request");
+ 
+
+  if (driver.approvalStatus === IsApprove.SUSPENDED) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "You are a SUSPENDED Driver. You can't accept Request"
+    );
   }
 
   const ride = await Ride.findById(rideId);
@@ -63,8 +71,6 @@ const acceptRide = async (rideId: string, driverUserId: string) => {
   ride.status = RideStatus.ACCEPTED;
   ride.timestamps.acceptedAt = new Date();
   await ride.save();
-  
-  
 
   driver.availabilityStatus = IsAvailable.OFFLINE;
   await driver.save();
@@ -96,8 +102,6 @@ const rejectRide = async (rideId: string, driverUserId: string) => {
   ride.driver = driver._id;
   ride.status = RideStatus.REJECTED;
   await ride.save();
-  
- 
 
   driver.availabilityStatus = IsAvailable.ONLINE;
   await driver.save();
@@ -117,11 +121,11 @@ const updateRideStatus = async (rideId: string, driverUserId: string) => {
   }
 
   // Check if driver is assigned (handle both driver._id and userId)
-  const isAssigned = ride.driver && (
-    ride.driver.toString() === driver._id.toString() || 
-    ride.driver.toString() === driverUserId
-  );
-  
+  const isAssigned =
+    ride.driver &&
+    (ride.driver.toString() === driver._id.toString() ||
+      ride.driver.toString() === driverUserId);
+
   if (!isAssigned) {
     throw new AppError(
       httpStatus.FORBIDDEN,
@@ -160,7 +164,6 @@ const updateRideStatus = async (rideId: string, driverUserId: string) => {
   return ride;
 };
 
-
 const getRideHistory = async (userId: string) => {
   const driver = await Driver.findOne({ user: userId });
 
@@ -169,14 +172,21 @@ const getRideHistory = async (userId: string) => {
   }
 
   const rides = await Ride.find({ driver: driver._id })
-    .populate('rider', 'name email phone')
+    .populate("rider", "name email phone")
     .sort({ createdAt: -1 });
 
-  const completedRides = rides.filter(ride => ride.status === 'COMPLETED');
-  const totalEarnings = completedRides.reduce((sum, ride) => sum + ride.fare, 0);
-  const averageRating = completedRides.length > 0 
-    ? (completedRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) / completedRides.length).toFixed(1)
-    : 0;
+  const completedRides = rides.filter((ride) => ride.status === "COMPLETED");
+  const totalEarnings = completedRides.reduce(
+    (sum, ride) => sum + ride.fare,
+    0
+  );
+  const averageRating =
+    completedRides.length > 0
+      ? (
+          completedRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) /
+          completedRides.length
+        ).toFixed(1)
+      : 0;
 
   return {
     totalRides: rides.length,
@@ -187,55 +197,97 @@ const getRideHistory = async (userId: string) => {
   };
 };
 
-
 const updateDriverStatus = async (userId: string, isOnline: boolean) => {
-  const user = await User.findById(userId);
+  const driver = await Driver.findById({ user: userId });
+
+  if (!driver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Driver profile not found");
+  }
+
+  if (driver.approvalStatus !== IsApprove.APPROVED) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Only approved drivers can update their status"
+    );
+  }
+
+   await User.findByIdAndUpdate(userId, { isOnline });
+  driver.availabilityStatus = isOnline ? IsAvailable.ONLINE : IsAvailable.OFFLINE;
+  await driver.save();
   
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, "User not found");
-  }
-
-  if (user.role !== 'DRIVER') {
-    throw new AppError(httpStatus.FORBIDDEN, "Only drivers can update online status");
-  }
-
-  const updatedUser = await User.findByIdAndUpdate(
-    userId,
-    { isOnline },
-    { new: true, runValidators: true }
-  ).select('-password');
-
-  return updatedUser;
+  return { isOnline, availabilityStatus: driver.availabilityStatus };
 };
 
+
+
+const getActiveRides = async (userId: string) => {
+  const driver = await Driver.findOne({ user: userId });
+  if (!driver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
+  }
+
+  const activeRides = await Ride.find({
+    $or: [{ driver: driver._id }, { driver: userId }],
+    status: { $in: ["ACCEPTED", "PICKED_UP", "IN_TRANSIT"] },
+  })
+    .populate("rider", "name email phone")
+    .sort({ createdAt: -1 });
+
+  return activeRides;
+};
+
+// driver.service.ts
+const getDriverProfile = async (userId: string) => {
+  const driver = await Driver.findOne({ user: userId }).populate('user', '-password');
+  
+  if (!driver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Driver profile not found");
+  }
+  
+  return driver;
+};
+
+// Fix the getDriverStats function
 const getDriverStats = async (userId: string) => {
+  const driver = await Driver.findOne({ user: userId });
+  
+  if (!driver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Get today's completed rides
+  // Get today's completed rides for this driver
   const todayRides = await Ride.find({
-    driver: userId,
-    status: 'COMPLETED',
-    createdAt: { $gte: today, $lt: tomorrow }
+    driver: driver._id, // Filter by driver ID
+    status: "COMPLETED",
+    createdAt: { $gte: today, $lt: tomorrow },
   });
 
-  // Get all completed rides for average rating and recent rides
+  // Get all completed rides for this driver
   const [allCompletedRides, recentRides] = await Promise.all([
     Ride.find({
-      driver: userId,
-      status: 'COMPLETED'
+      driver: driver._id, // Filter by driver ID
+      status: "COMPLETED",
     }),
     Ride.find({
-      driver: userId
-    }).sort({ createdAt: -1 }).limit(5).populate('rider', 'name')
+      driver: driver._id, // Filter by driver ID
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("rider", "name"),
   ]);
 
   const todayEarnings = todayRides.reduce((sum, ride) => sum + ride.fare, 0);
   const totalRides = allCompletedRides.length;
-  const averageRating = totalRides > 0 
-    ? (allCompletedRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) / totalRides).toFixed(1)
+  const averageRating = totalRides > 0
+    ? (
+        allCompletedRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) /
+        totalRides
+      ).toFixed(1)
     : 0;
 
   return {
@@ -243,50 +295,75 @@ const getDriverStats = async (userId: string) => {
     todayRides: todayRides.length,
     totalRides,
     averageRating,
-    hoursOnline: 0, 
-    earningsChange: '+0%', 
-    recentRides
+    hoursOnline: 0,
+    earningsChange: "+0%",
+    recentRides,
   };
 };
 
+// Fix the getDriverEarnings function
 const getDriverEarnings = async (userId: string) => {
   const driver = await Driver.findOne({ user: userId });
-    if (!driver ) {
-        throw new AppError(httpStatus.BAD_REQUEST, "Driver is not found");
-      }
+  if (!driver) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Driver not found");
+  }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // Get current date in UTC and adjust for timezone
+  const now = new Date();
+  const timezoneOffset = now.getTimezoneOffset() * 60000; // offset in milliseconds
+  
+  // Today's date range (local time)
+  const todayStart = new Date(now.getTime() - timezoneOffset);
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
 
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay());
+  // Weekly date range (start of week)
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(todayStart.getDate() - todayStart.getDay()); // Sunday of this week
 
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  // Monthly date range (start of month)
+  const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
 
-  // Get rides for different periods
+  console.log('Date ranges:', {
+    today: { start: todayStart, end: todayEnd },
+    week: { start: weekStart },
+    month: { start: monthStart }
+  });
+
+  // Get rides for different periods for this specific driver
   const [todayRides, weeklyRides, monthlyRides, allRides] = await Promise.all([
     Ride.find({
       driver: driver._id,
-      status: 'COMPLETED',
-      createdAt: { $gte: today, $lt: tomorrow }
+      status: "COMPLETED",
+      createdAt: { 
+        $gte: todayStart, 
+        $lt: todayEnd 
+      },
     }),
     Ride.find({
       driver: driver._id,
-      status: 'COMPLETED',
-      createdAt: { $gte: weekStart }
+      status: "COMPLETED",
+      createdAt: { $gte: weekStart },
     }),
     Ride.find({
       driver: driver._id,
-      status: 'COMPLETED',
-      createdAt: { $gte: monthStart }
+      status: "COMPLETED",
+      createdAt: { $gte: monthStart },
     }),
     Ride.find({
       driver: driver._id,
-      status: 'COMPLETED'
-    }).sort({ createdAt: -1 }).limit(10)
+      status: "COMPLETED",
+    })
+      .sort({ createdAt: -1 })
+      .limit(10),
   ]);
+
+  console.log('Today rides count:', todayRides.length);
+  console.log('Today rides:', todayRides.map(r => ({ 
+    fare: r.fare, 
+    createdAt: r.createdAt 
+  })));
 
   return {
     todayEarnings: todayRides.reduce((sum, ride) => sum + ride.fare, 0),
@@ -296,31 +373,8 @@ const getDriverEarnings = async (userId: string) => {
     monthlyEarnings: monthlyRides.reduce((sum, ride) => sum + ride.fare, 0),
     monthlyRides: monthlyRides.length,
     totalEarnings: allRides.reduce((sum, ride) => sum + ride.fare, 0),
-    recentEarnings: allRides
+    recentEarnings: allRides,
   };
-};
-
-const getActiveRides = async (userId: string) => {
-
-  
-  const driver = await Driver.findOne({ user: userId });
-  if (!driver) {
-    throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
-  }
-  
- 
-
-  const activeRides = await Ride.find({
-    $or: [
-      { driver: driver._id },
-      { driver: userId }
-    ],
-    status: { $in: ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'] }
-  }).populate('rider', 'name email phone').sort({ createdAt: -1 });
-  
-  
-
-  return activeRides;
 };
 
 export const DriverService = {
@@ -334,4 +388,5 @@ export const DriverService = {
   getDriverStats,
   getDriverEarnings,
   getActiveRides,
+  getDriverProfile
 };

@@ -20,6 +20,7 @@ const user_interface_1 = require("../user/user.interface");
 const ride_model_1 = require("../ride/ride.model");
 const driver_model_1 = require("../driver/driver.model");
 const ride_interface_1 = require("../ride/ride.interface");
+const driver_interface_1 = require("../driver/driver.interface");
 const approveDriver = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const existingUser = yield user_model_1.User.findById(userId);
     if (!existingUser) {
@@ -33,7 +34,13 @@ const approveDriver = (userId) => __awaiter(void 0, void 0, void 0, function* ()
     }
     existingUser.isApproved = true;
     yield existingUser.save();
-    return existingUser;
+    const driver = yield driver_model_1.Driver.findOne({ user: userId });
+    if (!driver) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver profile not found");
+    }
+    driver.approvalStatus = driver_interface_1.IsApprove.APPROVED;
+    yield driver.save();
+    return { user: existingUser, driver };
 });
 const suspendDriver = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const existingUser = yield user_model_1.User.findById(userId);
@@ -48,7 +55,13 @@ const suspendDriver = (userId) => __awaiter(void 0, void 0, void 0, function* ()
     }
     existingUser.isApproved = false;
     yield existingUser.save();
-    return existingUser;
+    const driver = yield driver_model_1.Driver.findOne({ user: userId });
+    if (driver) {
+        // Update Driver collection
+        driver.approvalStatus = driver_interface_1.IsApprove.SUSPENDED;
+        yield driver.save();
+    }
+    return { user: existingUser, driver };
 });
 const blockUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const existingUser = yield user_model_1.User.findById(userId);

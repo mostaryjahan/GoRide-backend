@@ -6,6 +6,7 @@ import { Ride } from "../ride/ride.model";
 import { IAdminReport } from "./admin.interface";
 import { Driver } from "../driver/driver.model";
 import { RideStatus } from "../ride/ride.interface";
+import { IsApprove } from "../driver/driver.interface";
 
 const approveDriver = async (userId: string) => {
   const existingUser = await User.findById(userId);
@@ -24,8 +25,17 @@ const approveDriver = async (userId: string) => {
 
   existingUser.isApproved = true;
   await existingUser.save();
+   
+  const driver = await Driver.findOne({ user: userId });
+  
+  if (!driver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Driver profile not found");
+  }
 
-  return existingUser;
+  driver.approvalStatus = IsApprove.APPROVED;
+  await driver.save();
+
+  return { user: existingUser, driver };
 };
 
 const suspendDriver = async (userId: string) => {
@@ -46,7 +56,15 @@ const suspendDriver = async (userId: string) => {
   existingUser.isApproved = false;
   await existingUser.save();
 
-  return existingUser;
+   const driver = await Driver.findOne({ user: userId });
+
+   if (driver) {
+    // Update Driver collection
+    driver.approvalStatus = IsApprove.SUSPENDED;
+    await driver.save();
+  }
+
+  return { user: existingUser, driver };
 };
 
 const blockUser = async (userId: string) => {
