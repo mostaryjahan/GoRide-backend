@@ -112,17 +112,22 @@ const resetPassword = catchAsync(
 
 
 const googleCallbackController = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user as any;
+    let redirectTo = req.query.state ? (req.query.state as string) : "";
+
+    if (redirectTo.startsWith("/")) {
+      redirectTo = redirectTo.slice(1);
+    }
+    const user = req.user ;
 
     if (!user) {
         throw new AppError(httpStatus.NOT_FOUND, "User Not Found")
     }
 
-    const tokenInfo = await createUserTokens(user)
+    const tokenInfo = createUserTokens(user)
     setAuthCookie(res, tokenInfo)
 
     // Google users are always riders, redirect to rider dashboard
-    res.redirect(`${envVars.FRONTEND_URL}/rider/dashboard?googleAuth=success`)
+    res.redirect(`${envVars.FRONTEND_URL}/${redirectTo}`)
 })
 
 

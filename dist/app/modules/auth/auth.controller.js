@@ -104,14 +104,18 @@ const resetPassword = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter
     });
 }));
 const googleCallbackController = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    let redirectTo = req.query.state ? req.query.state : "";
+    if (redirectTo.startsWith("/")) {
+        redirectTo = redirectTo.slice(1);
+    }
     const user = req.user;
     if (!user) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User Not Found");
     }
-    const tokenInfo = yield (0, userTokens_1.createUserTokens)(user);
+    const tokenInfo = (0, userTokens_1.createUserTokens)(user);
     (0, setCookie_1.setAuthCookie)(res, tokenInfo);
     // Google users are always riders, redirect to rider dashboard
-    res.redirect(`${env_1.envVars.FRONTEND_URL}/rider/dashboard?googleAuth=success`);
+    res.redirect(`${env_1.envVars.FRONTEND_URL}/${redirectTo}`);
 }));
 const getMe = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const decodedToken = req.user;
