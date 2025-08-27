@@ -11,6 +11,7 @@ const setAuthCookie = (res, tokenInfo) => {
     }
     if (tokenInfo.refreshToken) {
         res.cookie("refreshToken", tokenInfo.refreshToken, {
+            httpOnly: true,
             secure: true,
             sameSite: "none"
         });
