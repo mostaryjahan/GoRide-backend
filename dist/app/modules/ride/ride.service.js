@@ -18,11 +18,11 @@ const ride_model_1 = require("./ride.model");
 const AppError_1 = __importDefault(require("../../errorHelpers/AppError"));
 const http_status_codes_1 = __importDefault(require("http-status-codes"));
 const mongoose_1 = require("mongoose");
+const socketHelper_1 = require("../../utils/socketHelper");
 const createRide = (riderId, payload) => __awaiter(void 0, void 0, void 0, function* () {
     if (!riderId) {
         throw new AppError_1.default(http_status_codes_1.default.UNAUTHORIZED, "Unauthorized access");
     }
-    // console.log('Creating ride with payload:', payload);
     const existingRide = yield ride_model_1.Ride.findOne({
         rider: riderId,
         status: {
@@ -50,11 +50,16 @@ const createRide = (riderId, payload) => __awaiter(void 0, void 0, void 0, funct
                 requestedAt: new Date(),
             },
         });
-        // console.log('Ride created successfully:', ride._id);
+        // Emit ride created event
+        (0, socketHelper_1.emitToRide)(ride._id.toString(), 'ride-created', {
+            rideId: ride._id,
+            status: ride.status,
+            pickupLocation: ride.pickupLocation,
+            destinationLocation: ride.destinationLocation
+        });
         return ride;
     }
     catch (error) {
-        // console.error('Error creating ride:', error);
         throw error;
     }
 });
@@ -73,16 +78,20 @@ const cancelRide = (rideId, riderId) => __awaiter(void 0, void 0, void 0, functi
         ride.status !== ride_interface_1.RideStatus.ACCEPTED) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, `Cannot cancel a ride at '${ride.status}' stage`);
     }
-    // Check if within 5-minute cancel window
     const requestTime = ride.timestamps.requestedAt || ride.createdAt;
     const now = new Date();
-    const timeDiff = (now.getTime() - requestTime.getTime()) / (1000 * 60); // minutes
+    const timeDiff = (now.getTime() - requestTime.getTime()) / (1000 * 60);
     if (timeDiff > 5) {
         throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Cancel window expired. You can only cancel within 5 minutes of requesting");
     }
     ride.status = ride_interface_1.RideStatus.CANCELLED;
     ride.timestamps.cancelledAt = new Date();
     yield ride.save();
+    // Emit ride cancelled event
+    (0, socketHelper_1.emitToRide)(rideId, 'ride-status-changed', {
+        status: ride_interface_1.RideStatus.CANCELLED,
+        cancelledAt: ride.timestamps.cancelledAt
+    });
     return ride;
 });
 const getMyRides = (riderId) => __awaiter(void 0, void 0, void 0, function* () {

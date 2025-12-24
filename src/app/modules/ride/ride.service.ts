@@ -3,13 +3,12 @@ import { Ride } from "./ride.model";
 import AppError from "../../errorHelpers/AppError";
 import httpStatus from "http-status-codes";
 import { isValidObjectId } from "mongoose";
+import { emitToRide } from "../../utils/socketHelper";
 
 const createRide = async (riderId: string, payload: Partial<IRide>) => {
   if (!riderId) {
     throw new AppError(httpStatus.UNAUTHORIZED, "Unauthorized access");
   }
-
-  // console.log('Creating ride with payload:', payload);
 
   const existingRide = await Ride.findOne({
     rider: riderId,
@@ -44,13 +43,18 @@ const createRide = async (riderId: string, payload: Partial<IRide>) => {
       },
     });
     
-    // console.log('Ride created successfully:', ride._id);
+    // Emit ride created event
+    emitToRide(ride._id.toString(), 'ride-created', {
+      rideId: ride._id,
+      status: ride.status,
+      pickupLocation: ride.pickupLocation,
+      destinationLocation: ride.destinationLocation
+    });
+    
     return ride;
   } catch (error) {
-    // console.error('Error creating ride:', error);
     throw error;
   }
-
 };
 
 const cancelRide = async (rideId: string, riderId: string) => {
@@ -81,10 +85,9 @@ const cancelRide = async (rideId: string, riderId: string) => {
     );
   }
 
-  // Check if within 5-minute cancel window
   const requestTime = ride.timestamps.requestedAt || ride.createdAt;
   const now = new Date();
-  const timeDiff = (now.getTime() - requestTime.getTime()) / (1000 * 60); // minutes
+  const timeDiff = (now.getTime() - requestTime.getTime()) / (1000 * 60);
   
   if (timeDiff > 5) {
     throw new AppError(
@@ -98,12 +101,17 @@ const cancelRide = async (rideId: string, riderId: string) => {
 
   await ride.save();
 
+  // Emit ride cancelled event
+  emitToRide(rideId, 'ride-status-changed', {
+    status: RideStatus.CANCELLED,
+    cancelledAt: ride.timestamps.cancelledAt
+  });
+
   return ride;
 };
 
 const getMyRides = async (riderId: string) => {
   const rides = await Ride.find({ rider: riderId }).sort({ createdAt: -1 });
-
   return rides;
 };
 
