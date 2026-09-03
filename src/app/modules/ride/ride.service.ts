@@ -123,7 +123,7 @@ const getSingleRide = async (rideId: string, riderId: string) => {
   const ride = await Ride.findById(rideId)
     .populate({
       path: 'driver',
-      select: 'vehicleType vehicleNumber',
+      select: 'vehicleType vehicleNumber user',
       populate: {
         path: 'user',
         select: 'name phone'

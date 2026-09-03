@@ -10,8 +10,8 @@ const router = Router();
 router.post(
   "/apply-driver",
   checkAuth(Role.RIDER),
-  DriverController.applyToBeDriver,
-  validateRequest(createDriverZodSchema)
+  validateRequest(createDriverZodSchema),
+  DriverController.applyToBeDriver
 );
 router.get(
   "/rides-available",
